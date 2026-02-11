@@ -1,14 +1,14 @@
 /**
- * Created by AI Assistant (Senior Dev Mode)
- * File: email.js
- * Description: Email sending endpoint with scheduling support
+ * Email sending endpoint with scheduling support
  */
 
 const express = require('express');
 const router = express.Router();
+const logger = require('../config/logger');
+const { emailLimiter } = require('../middleware/rateLimiter');
 const { sendEmail, scheduleEmail } = require('../services/email.service');
 
-router.post('/', async (req, res) => {
+router.post('/', emailLimiter, async (req, res) => {
   try {
     const { email, summary, transcript, scheduleOption } = req.body;
 
@@ -30,6 +30,11 @@ router.post('/', async (req, res) => {
     if (!transcript || typeof transcript !== 'string') {
       return res.status(400).json({ error: 'Transcript is required' });
     }
+
+    logger.info('Email request received', {
+      recipient: email,
+      scheduleOption: scheduleOption || 'instant'
+    });
 
     // Handle instant or scheduled sending
     if (scheduleOption && scheduleOption !== 'instant') {
@@ -57,7 +62,7 @@ router.post('/', async (req, res) => {
     }
 
   } catch (error) {
-    console.error('Email sending error:', error);
+    logger.error('Email request failed', { error: error.message });
     res.status(500).json({
       error: 'Failed to send email',
       message: error.message

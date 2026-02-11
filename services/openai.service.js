@@ -1,5 +1,6 @@
 const OpenAI = require('openai');
 const fs = require('fs');
+const logger = require('../config/logger');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -12,7 +13,7 @@ const openai = new OpenAI({
  */
 async function transcribeAudio(audioFilePath) {
   try {
-    console.log('Transcribing audio with Whisper...');
+    logger.info('Starting audio transcription');
     
     const transcription = await openai.audio.transcriptions.create({
       file: fs.createReadStream(audioFilePath),
@@ -20,10 +21,13 @@ async function transcribeAudio(audioFilePath) {
       language: 'en'
     });
 
-    console.log('Transcription completed successfully');
+    logger.info('Transcription completed successfully');
     return transcription.text;
   } catch (error) {
-    console.error('Whisper transcription error:', error);
+    logger.error('Whisper transcription failed', { 
+      error: error.message,
+      filePath: audioFilePath 
+    });
     throw new Error(`Transcription failed: ${error.message}`);
   }
 }
@@ -35,7 +39,9 @@ async function transcribeAudio(audioFilePath) {
  */
 async function summarizeTranscript(transcript) {
   try {
-    console.log('Generating summary with GPT-4o...');
+    logger.info('Starting transcript summarization', { 
+      transcriptLength: transcript.length 
+    });
     
     const prompt = `You are a conversation summarizer. Given a transcript, create a concise summary with:
 1. Exactly 5 bullet points capturing the key topics, decisions, and important details discussed
@@ -72,10 +78,14 @@ ${transcript}`;
     const summaryText = completion.choices[0].message.content;
     const summary = JSON.parse(summaryText);
 
-    console.log('Summary generated successfully');
+    logger.info('Summary generated successfully', {
+      bulletCount: summary.bullets?.length
+    });
     return summary;
   } catch (error) {
-    console.error('GPT-4o summarization error:', error);
+    logger.error('GPT-4o summarization failed', { 
+      error: error.message 
+    });
     throw new Error(`Summarization failed: ${error.message}`);
   }
 }
@@ -97,7 +107,10 @@ async function retryWithBackoff(fn, maxRetries = 3) {
       
       if (error.status === 429) {
         const delay = Math.pow(2, attempt) * 1000;
-        console.log(`Rate limited. Retrying in ${delay}ms...`);
+        logger.warn('Rate limited, retrying', { 
+          attempt: attempt + 1, 
+          delay 
+        });
         await new Promise(resolve => setTimeout(resolve, delay));
       } else {
         throw error;

@@ -1,5 +1,5 @@
 const nodemailer = require('nodemailer');
-const cron = require('node-cron');
+const logger = require('../config/logger');
 
 // Create transporter
 const transporter = nodemailer.createTransport({
@@ -164,7 +164,7 @@ function generateEmailTemplate(summary, transcript) {
  */
 async function sendEmail(toEmail, summary, transcript) {
   try {
-    console.log(`Sending email to ${toEmail}...`);
+    logger.info('Sending email', { recipient: toEmail });
     
     const htmlContent = generateEmailTemplate(summary, transcript);
     
@@ -176,7 +176,10 @@ async function sendEmail(toEmail, summary, transcript) {
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log('Email sent successfully:', info.messageId);
+    logger.info('Email sent successfully', { 
+      messageId: info.messageId,
+      recipient: toEmail 
+    });
     
     return {
       success: true,
@@ -184,13 +187,19 @@ async function sendEmail(toEmail, summary, transcript) {
       timestamp: new Date().toISOString()
     };
   } catch (error) {
-    console.error('Email send error:', error);
+    logger.error('Email send failed', { 
+      error: error.message,
+      recipient: toEmail 
+    });
     throw new Error(`Failed to send email: ${error.message}`);
   }
 }
 
 /**
  * Schedule email for later delivery
+ * Note: For production use, implement a proper job queue (Bull, BullMQ, or database-backed scheduling)
+ * This implementation uses setTimeout which will lose scheduled emails on server restart
+ * 
  * @param {string} toEmail - Recipient email address
  * @param {Object} summary - Summary object
  * @param {string} transcript - Original transcript
@@ -211,15 +220,22 @@ function scheduleEmail(toEmail, summary, transcript, scheduleOption) {
 
   const scheduledTime = new Date(Date.now() + option.delay);
   
-  console.log(`Scheduling email for ${scheduledTime.toISOString()}`);
+  logger.warn('Scheduling email with setTimeout - not recommended for production', {
+    recipient: toEmail,
+    scheduledTime: scheduledTime.toISOString(),
+    delay: option.label
+  });
 
-  // Schedule using setTimeout (for simplicity in MVP)
+  // TODO: Replace with proper job queue for production
   setTimeout(async () => {
     try {
       await sendEmail(toEmail, summary, transcript);
-      console.log(`Scheduled email sent to ${toEmail}`);
+      logger.info('Scheduled email sent successfully', { recipient: toEmail });
     } catch (error) {
-      console.error('Failed to send scheduled email:', error);
+      logger.error('Scheduled email send failed', { 
+        error: error.message,
+        recipient: toEmail 
+      });
     }
   }, option.delay);
 
@@ -238,10 +254,12 @@ function scheduleEmail(toEmail, summary, transcript, scheduleOption) {
 async function verifyEmailConfig() {
   try {
     await transporter.verify();
-    console.log('Email configuration verified successfully');
+    logger.info('Email configuration verified successfully');
     return true;
   } catch (error) {
-    console.error('Email configuration verification failed:', error);
+    logger.error('Email configuration verification failed', { 
+      error: error.message 
+    });
     return false;
   }
 }

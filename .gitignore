@@ -1,5 +1,15 @@
 node_modules/
 .env
+.env.local
+.env.*.local
 uploads/
+logs/
 *.log
 .DS_Store
+npm-debug.log*
+coverage/
+.nyc_output/
+dist/
+build/
+.vscode/
+.idea/

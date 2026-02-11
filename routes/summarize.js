@@ -1,11 +1,10 @@
 /**
- * Created by AI Assistant (Senior Dev Mode)
- * File: summarize.js
- * Description: Summarization endpoint using GPT-4o
+ * Summarization endpoint using GPT-4o
  */
 
 const express = require('express');
 const router = express.Router();
+const logger = require('../config/logger');
 const { summarizeTranscript, retryWithBackoff } = require('../services/openai.service');
 
 router.post('/', async (req, res) => {
@@ -20,7 +19,9 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Transcript cannot be empty' });
     }
 
-    console.log(`Summarizing transcript (${transcript.length} characters)...`);
+    logger.info('Summarization request received', { 
+      transcriptLength: transcript.length 
+    });
 
     // Summarize with retry logic
     const summary = await retryWithBackoff(() => summarizeTranscript(transcript));
@@ -41,7 +42,7 @@ router.post('/', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Summarization error:', error);
+    logger.error('Summarization request failed', { error: error.message });
     res.status(500).json({
       error: 'Summarization failed',
       message: error.message

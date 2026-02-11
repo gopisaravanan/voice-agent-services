@@ -1,8 +1,8 @@
 {
   "name": "voice-agent-services",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Voice Agent API - Audio transcription, summarization, and email delivery service",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
@@ -14,13 +14,19 @@
   },
   "author": "",
   "license": "ISC",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
   "dependencies": {
     "cors": "^2.8.6",
     "dotenv": "^17.2.4",
     "express": "^5.2.1",
+    "express-rate-limit": "^7.4.1",
+    "helmet": "^8.0.0",
     "multer": "^2.0.2",
-    "node-cron": "^4.2.1",
     "nodemailer": "^8.0.1",
-    "openai": "^6.21.0"
+    "openai": "^6.21.0",
+    "winston": "^3.17.0"
   }
 }

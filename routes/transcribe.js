@@ -1,7 +1,5 @@
 /**
- * Created by AI Assistant (Senior Dev Mode)
- * File: transcribe.js
- * Description: Transcription endpoint using OpenAI Whisper
+ * Transcription endpoint using OpenAI Whisper
  */
 
 const express = require('express');
@@ -9,6 +7,8 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const logger = require('../config/logger');
+const { uploadLimiter } = require('../middleware/rateLimiter');
 const { transcribeAudio, retryWithBackoff } = require('../services/openai.service');
 
 // Configure multer for file uploads
@@ -41,7 +41,7 @@ const upload = multer({
   }
 });
 
-router.post('/', upload.single('audio'), async (req, res) => {
+router.post('/', uploadLimiter, upload.single('audio'), async (req, res) => {
   let filePath = null;
   
   try {
@@ -50,7 +50,11 @@ router.post('/', upload.single('audio'), async (req, res) => {
     }
 
     filePath = req.file.path;
-    console.log(`Received audio file: ${req.file.originalname} (${req.file.size} bytes)`);
+    logger.info('Audio file received', {
+      filename: req.file.originalname,
+      size: req.file.size,
+      mimetype: req.file.mimetype
+    });
 
     // Transcribe with retry logic
     const transcript = await retryWithBackoff(() => transcribeAudio(filePath));
@@ -58,12 +62,14 @@ router.post('/', upload.single('audio'), async (req, res) => {
     res.json({
       success: true,
       transcript: transcript,
-      fileSize: req.file.size,
-      duration: null // Could be calculated if needed
+      fileSize: req.file.size
     });
 
   } catch (error) {
-    console.error('Transcription error:', error);
+    logger.error('Transcription request failed', { 
+      error: error.message,
+      filename: req.file?.originalname 
+    });
     res.status(500).json({
       error: 'Transcription failed',
       message: error.message
@@ -73,9 +79,12 @@ router.post('/', upload.single('audio'), async (req, res) => {
     if (filePath && fs.existsSync(filePath)) {
       try {
         fs.unlinkSync(filePath);
-        console.log('Cleaned up temporary file');
+        logger.debug('Cleaned up temporary file', { filePath });
       } catch (cleanupError) {
-        console.error('Failed to cleanup file:', cleanupError);
+        logger.error('Failed to cleanup file', { 
+          error: cleanupError.message,
+          filePath 
+        });
       }
     }
   }
