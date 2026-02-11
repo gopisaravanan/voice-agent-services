@@ -14,9 +14,17 @@ const { transcribeAudio, retryWithBackoff } = require('../services/openai.servic
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadsDir = path.join(__dirname, '../uploads');
+    // Use /tmp in Vercel serverless, uploads in local dev
+    const uploadsDir = process.env.VERCEL === '1' 
+      ? '/tmp'
+      : path.join(__dirname, '../uploads');
+    
     if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
+      try {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      } catch (err) {
+        logger.warn('Could not create upload directory:', err.message);
+      }
     }
     cb(null, uploadsDir);
   },

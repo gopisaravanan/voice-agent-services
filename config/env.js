@@ -29,19 +29,30 @@ function validateEnv() {
   }
 
   if (missing.length > 0) {
-    logger.error('Missing required environment variables', { missing });
-    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+    const errorMsg = `Missing required environment variables: ${missing.join(', ')}`;
+    // In Vercel, just log warning - environment vars are set in dashboard
+    if (process.env.VERCEL === '1') {
+      console.warn('WARNING:', errorMsg);
+      console.warn('Make sure environment variables are set in Vercel dashboard');
+    } else {
+      logger.error('Missing required environment variables', { missing });
+      throw new Error(errorMsg);
+    }
   }
 
   // Set defaults for optional variables
   for (const [key, defaultValue] of Object.entries(optionalEnvVars)) {
     if (!process.env[key]) {
       process.env[key] = defaultValue;
-      logger.info(`Using default value for ${key}: ${defaultValue}`);
+      if (process.env.VERCEL !== '1') {
+        logger.info(`Using default value for ${key}: ${defaultValue}`);
+      }
     }
   }
 
-  logger.info('Environment variables validated successfully');
+  if (process.env.VERCEL !== '1') {
+    logger.info('Environment variables validated successfully');
+  }
 }
 
 function getConfig() {

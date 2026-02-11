@@ -13,28 +13,37 @@ const logger = require('./config/logger');
 const { validateEnv, getConfig } = require('./config/env');
 const { apiLimiter } = require('./middleware/rateLimiter');
 
-// Validate environment variables
+// Validate environment variables (but don't exit in serverless)
 try {
   validateEnv();
 } catch (error) {
   console.error('Environment validation failed:', error.message);
-  process.exit(1);
+  // In Vercel, log error but continue - environment vars might be set differently
+  if (process.env.VERCEL !== '1') {
+    process.exit(1);
+  }
 }
 
 const config = getConfig();
 const app = express();
 const PORT = config.port;
 
-// Create necessary directories
-const uploadsDir = path.join(__dirname, 'uploads');
-const logsDir = path.join(__dirname, 'logs');
+// Create necessary directories (skip in Vercel serverless - use /tmp instead)
+if (process.env.VERCEL !== '1') {
+  const uploadsDir = path.join(__dirname, 'uploads');
+  const logsDir = path.join(__dirname, 'logs');
 
-[uploadsDir, logsDir].forEach(dir => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-    logger.info(`Created directory: ${dir}`);
-  }
-});
+  [uploadsDir, logsDir].forEach(dir => {
+    if (!fs.existsSync(dir)) {
+      try {
+        fs.mkdirSync(dir, { recursive: true });
+        logger.info(`Created directory: ${dir}`);
+      } catch (err) {
+        logger.warn(`Could not create directory ${dir}:`, err.message);
+      }
+    }
+  });
+}
 
 // Security middleware
 app.use(helmet({

@@ -2,6 +2,8 @@
 
 Production-ready Express.js API server for voice transcription, summarization, and email delivery.
 
+> 🚨 **Having deployment issues?** → **[VERCEL_FIXES_APPLIED.md](./VERCEL_FIXES_APPLIED.md)** - All serverless fixes documented!
+>
 > **New here?** Start with **[START_HERE.md](./START_HERE.md)** for quick setup guide!
 >
 > **Ready to deploy?** Check **[VERCEL_DEPLOY.md](./VERCEL_DEPLOY.md)** for 5-minute deployment!
